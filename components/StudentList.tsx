@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Phone, Search, Trash2, Plus, Upload, X, QrCode, Camera } from 'lucide-react';
+import { Phone, Search, Trash2, Plus, Upload, X, QrCode, Camera, RefreshCcw } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { Student } from '../types';
 
@@ -140,6 +140,13 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
     stopCamera();
   };
 
+  const handleResetSystem = () => {
+    if (confirm("Are you sure? This will delete ALL data (students, records, etc) and reset the app. This is useful for fixing bugs.")) {
+        localStorage.clear();
+        window.location.reload();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,6 +164,13 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
             />
           </div>
           <button 
+            onClick={handleResetSystem}
+            className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200"
+            title="Clear all data and start fresh"
+          >
+             <RefreshCcw className="w-4 h-4" /> Reset System
+          </button>
+          <button 
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
           >
@@ -168,42 +182,49 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
 
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredStudents.map((student) => (
-          <div key={student.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <img 
-                src={student.photoUrl} 
-                alt={student.name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-slate-100"
-              />
-              <div className="flex gap-1">
-                <button onClick={() => setStudentForQr(student)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full">
-                  <QrCode className="w-5 h-5" />
-                </button>
-                <button onClick={() => setStudentToDelete(student)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full">
-                  <Trash2 className="w-5 h-5" />
-                </button>
+        {filteredStudents.length === 0 ? (
+           <div className="col-span-full text-center py-10 bg-white rounded-2xl border border-dashed border-slate-300">
+              <p className="text-slate-500 font-medium">No students found.</p>
+              <p className="text-sm text-slate-400">Click "Add Student" to register yourself.</p>
+           </div>
+        ) : (
+          filteredStudents.map((student) => (
+            <div key={student.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-4">
+                <img 
+                  src={student.photoUrl} 
+                  alt={student.name}
+                  className="w-16 h-16 rounded-full object-cover border-2 border-slate-100"
+                />
+                <div className="flex gap-1">
+                  <button onClick={() => setStudentForQr(student)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full">
+                    <QrCode className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => setStudentToDelete(student)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              <h3 className="font-bold text-slate-900 text-lg">{student.name}</h3>
+              <p className="text-sm text-slate-500">Roll: {student.rollNumber} • Class {student.className}</p>
+              
+              <div className="mt-4 pt-4 border-t border-slate-50 space-y-2 text-sm text-slate-600">
+                <div className="flex justify-between">
+                  <span>Guardian:</span>
+                  <span className="font-medium">{student.guardianName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Contact:</span>
+                  <div className="flex items-center gap-1">
+                      <Phone className="w-3 h-3" />
+                      <span className="font-medium">{student.contactNumber}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <h3 className="font-bold text-slate-900 text-lg">{student.name}</h3>
-            <p className="text-sm text-slate-500">Roll: {student.rollNumber} • Class {student.className}</p>
-            
-            <div className="mt-4 pt-4 border-t border-slate-50 space-y-2 text-sm text-slate-600">
-               <div className="flex justify-between">
-                 <span>Guardian:</span>
-                 <span className="font-medium">{student.guardianName}</span>
-               </div>
-               <div className="flex justify-between">
-                 <span>Contact:</span>
-                 <div className="flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    <span className="font-medium">{student.contactNumber}</span>
-                 </div>
-               </div>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Add Modal */}

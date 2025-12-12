@@ -55,13 +55,14 @@ export const identifyStudentsInGroup = async (
     const sceneClean = sceneImageBase64.replace(/^data:image\/\w+;base64,/, "");
     
     // 2. Batch Processing: 
-    // Reduced to 10 to ensure high speed and prevent timeout with large payloads.
-    const batches = chunkArray(candidates, 10);
+    // CRITICAL FIX: Reduced batch size from 10 to 3. 
+    // Sending HD images in large batches exceeds API payload limits, causing silent failures.
+    const batches = chunkArray(candidates, 3);
 
-    // 3. Process batches in PARALLEL using Promise.all for simultaneous recognition
+    // 3. Process batches in PARALLEL using Promise.all
     const batchPromises = batches.map(async (batch) => {
       const parts: any[] = [
-        { text: "Task: Aggressive Facial Recognition.\n\nInstructions:\n1. Your goal is to maximize matches. Be EXTREMELY LENIENT.\n2. Compare the CLASSROOM_SCENE faces with REFERENCE_STUDENTS.\n3. Focus on permanent features: Eyes, Nose Bridge, and Jawline.\n4. IGNORE differences in: Lighting (dark/bright), Distance, Camera Quality, Hair style, or Glasses.\n5. If a face looks even 50% similar to a reference, mark them as PRESENT." },
+        { text: "Task: Match faces in the CLASSROOM_SCENE with REFERENCE_STUDENTS.\n\nInstructions:\n1. Be EXTREMELY LENIENT. If there is ANY resemblance, mark as Present.\n2. Ignore bad lighting, blur, different angles, or glasses.\n3. Match based on facial structure (jaw, nose, eyes).\n4. Return ONLY the IDs of matching students in the JSON format." },
         { text: "CLASSROOM_SCENE:" },
         { inlineData: { mimeType: 'image/jpeg', data: sceneClean } },
         { text: "REFERENCE_STUDENTS:" }
@@ -88,7 +89,7 @@ export const identifyStudentsInGroup = async (
           contents: { parts },
           config: { 
             responseMimeType: "application/json",
-            temperature: 0.4 // Increased temperature slightly to allow for "fuzzier" matching
+            temperature: 0.4 
           }
         });
 
