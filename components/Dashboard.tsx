@@ -1,23 +1,55 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Users, UserCheck, AlertCircle, Calendar } from 'lucide-react';
+import { Users, UserCheck, AlertCircle, Calendar, Download } from 'lucide-react';
 import { getAttendanceStats } from '../services/mockData';
-import { AppView } from '../types';
+import { AppView, Student } from '../types';
 
 interface DashboardProps {
   onChangeView: (view: AppView) => void;
-  totalStudents: number;
+  students: Student[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onChangeView, totalStudents }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onChangeView, students }) => {
   const { average, trend } = getAttendanceStats();
+
+  const handleExportCSV = () => {
+    // 1. Define Headers
+    const headers = ['Student ID', 'Name', 'Roll Number', 'Class', 'Guardian Name', 'Contact Number'];
+    
+    // 2. Format Rows
+    const rows = students.map(student => [
+      student.id,
+      student.name,
+      student.rollNumber,
+      student.className,
+      student.guardianName,
+      student.contactNumber
+    ]);
+
+    // 3. Combine to CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')) // Wrap cells in quotes to handle commas in data
+    ].join('\n');
+
+    // 4. Create Blob and Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `student_registry_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-           <p className="text-slate-500">Welcome back, Sourav Singh .</p>
+           <p className="text-slate-500">Welcome back, Administrator.</p>
         </div>
         <div className="text-sm bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
           <Calendar className="w-4 h-4 text-slate-400" />
@@ -32,7 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onChangeView, totalStudents }) =>
           </div>
           <div>
             <p className="text-sm text-slate-500 font-medium">Total Students</p>
-            <h3 className="text-2xl font-bold text-slate-900">{totalStudents}</h3>
+            <h3 className="text-2xl font-bold text-slate-900">{students.length}</h3>
           </div>
         </div>
 
@@ -93,8 +125,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onChangeView, totalStudents }) =>
              >
                Add New Student
              </button>
-             <button className="w-full text-left px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-700 text-sm font-medium transition-colors">
-               Export Data (CSV)
+             <button 
+                onClick={handleExportCSV}
+                className="w-full text-left px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-700 text-sm font-medium transition-colors flex justify-between items-center"
+             >
+               <span>Export Data (CSV)</span>
+               <Download className="w-4 h-4 text-slate-400" />
              </button>
            </div>
          </div>
