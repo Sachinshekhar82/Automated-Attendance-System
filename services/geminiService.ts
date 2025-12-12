@@ -5,6 +5,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Helper to convert URL/Base64 to raw Base64 string for Gemini
 const getImageData = async (source: string): Promise<string> => {
+  if (!source) return "";
   if (source.startsWith('data:image')) {
     return source.split(',')[1];
   } else if (source.startsWith('http')) {
@@ -13,7 +14,10 @@ const getImageData = async (source: string): Promise<string> => {
       const blob = await response.blob();
       return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          resolve(res.split(',')[1]);
+        };
         reader.readAsDataURL(blob);
       });
     } catch (e) {
@@ -97,22 +101,23 @@ export const identifyStudentsInGroup = async (
     const sceneClean = sceneImageBase64.replace(/^data:image\/\w+;base64,/, "");
     const allFoundIds: string[] = [];
 
-    // Process in small batches (e.g., 5 students per batch) to ensure high accuracy and fit context
-    const batches = chunkArray(candidates, 5);
+    // Increased batch size to 20 because 2.5 Flash has a large context window 
+    // and this reduces round trips significantly, making it "instant".
+    const batches = chunkArray(candidates, 20);
 
-    // Process batches sequentially to avoid hitting rate limits too hard (though concurrent could work)
     for (const batch of batches) {
       const parts: any[] = [
-        { text: "The first image is the 'SCENE' (classroom view). The following images are 'REFERENCE_PHOTOS' of specific students. Your goal is to identify if any of the reference students appear in the SCENE. Ignore students in the scene if you don't have a matching reference photo for them." },
+        { text: "Task: Identify which of the REFERENCE_STUDENTS are present in the CLASSROOM_SCENE." },
+        { text: "CLASSROOM_SCENE:" },
         { inlineData: { mimeType: 'image/jpeg', data: sceneClean } },
-        { text: "Now, here are the reference photos:" }
+        { text: "REFERENCE_STUDENTS:" }
       ];
 
       let hasValidRef = false;
       for (const student of batch) {
         const imgData = await getImageData(student.photoUrl);
         if (imgData) {
-          parts.push({ text: `REFERENCE ID: "${student.id}"` });
+          parts.push({ text: `ID: "${student.id}"` });
           parts.push({ inlineData: { mimeType: 'image/jpeg', data: imgData } });
           hasValidRef = true;
         }
@@ -120,12 +125,15 @@ export const identifyStudentsInGroup = async (
 
       if (!hasValidRef) continue;
 
-      parts.push({ text: "Return a JSON object with a list of IDs for students found in the SCENE: { \"present_student_ids\": [\"id1\", \"id2\"] }. Be strict: only include an ID if the face matches the reference photo with high confidence." });
+      parts.push({ text: "Return a JSON object: { \"present_student_ids\": [\"id1\", \"id2\"] }. Only list IDs where the face matches clearly." });
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: { parts },
-        config: { responseMimeType: "application/json" }
+        config: { 
+          responseMimeType: "application/json",
+          temperature: 0.1 // Low temperature for factual ID matching
+        }
       });
 
       const text = response.text || "{}";
