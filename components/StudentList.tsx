@@ -57,21 +57,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Resize uploaded image too
-        const img = new Image();
-        img.src = reader.result as string;
-        img.onload = () => {
-           const canvas = document.createElement('canvas');
-           const MAX_WIDTH = 400;
-           const scaleSize = MAX_WIDTH / img.width;
-           canvas.width = MAX_WIDTH;
-           canvas.height = img.height * scaleSize;
-           const ctx = canvas.getContext('2d');
-           if (ctx) {
-             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-             setNewPhoto(canvas.toDataURL('image/jpeg', 0.8));
-           }
-        };
+        setNewPhoto(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -99,23 +85,15 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
   const capturePhoto = () => {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
-      // Resize to reasonable dimensions for AI efficiency (e.g., width 400px)
-      // High res isn't needed for face matching, but adds huge latency/payload
-      const videoWidth = videoRef.current.videoWidth;
-      const videoHeight = videoRef.current.videoHeight;
-      const MAX_WIDTH = 400;
-      const scale = MAX_WIDTH / videoWidth;
-      
-      canvas.width = MAX_WIDTH;
-      canvas.height = videoHeight * scale;
-      
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Draw image directly (no mirroring in saved data) to represent true appearance
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        
-        // Compress to JPEG 0.8 quality
-        setNewPhoto(canvas.toDataURL('image/jpeg', 0.8));
+        // Mirror the image to match video feed if needed, usually intuitive for selfies
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoRef.current, 0, 0);
+        setNewPhoto(canvas.toDataURL('image/jpeg'));
         stopCamera();
       }
     }

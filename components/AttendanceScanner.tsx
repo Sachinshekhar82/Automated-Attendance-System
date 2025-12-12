@@ -28,12 +28,11 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
   // Auto-Scan Interval
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isAutoScanning && stream && !submitted) {
-      // Reduced interval to 2.5s for faster feedback, relying on resizing to keep it light
-      interval = setInterval(processFrame, 2500); 
+    if (isAutoScanning && stream) {
+      interval = setInterval(processFrame, 4000); // Scan every 4 seconds
     }
     return () => clearInterval(interval);
-  }, [isAutoScanning, stream, attendance, submitted]); 
+  }, [isAutoScanning, stream, attendance]); // Re-bind if attendance changes to filter candidates
 
   const startCamera = async () => {
     try {
@@ -46,6 +45,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
+      // alert("Unable to access camera.");
     }
   };
 
@@ -60,10 +60,11 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
     if (isProcessing || !videoRef.current || !canvasRef.current) return;
 
     // Filter students: We only need to check students who are NOT yet marked present.
+    // This optimization saves tokens and improves accuracy.
     const absentStudents = students.filter(s => !attendance[s.id]);
 
     if (absentStudents.length === 0) {
-      setIsAutoScanning(false);
+      setIsAutoScanning(false); // All found
       alert("All students accounted for!");
       return;
     }
@@ -73,21 +74,10 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
     try {
       const context = canvasRef.current.getContext('2d');
       if (context) {
-        // CRITICAL FIX: Resize image to reduce payload size for Gemini API
-        // Sending 1080p images is too slow. 500px width is sufficient for face ID.
-        const videoWidth = videoRef.current.videoWidth;
-        const videoHeight = videoRef.current.videoHeight;
-        const targetWidth = 500;
-        const scale = targetWidth / videoWidth;
-        const targetHeight = videoHeight * scale;
-
-        canvasRef.current.width = targetWidth;
-        canvasRef.current.height = targetHeight;
-        
-        context.drawImage(videoRef.current, 0, 0, targetWidth, targetHeight);
-        
-        // Use standard quality (0.8) jpeg
-        const frameBase64 = canvasRef.current.toDataURL('image/jpeg', 0.8);
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+        context.drawImage(videoRef.current, 0, 0);
+        const frameBase64 = canvasRef.current.toDataURL('image/jpeg');
 
         // Send to Gemini
         const foundIds = await identifyStudentsInGroup(frameBase64, absentStudents);
@@ -99,6 +89,8 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
             foundIds.forEach(id => next[id] = true);
             return next;
           });
+          
+          // Flash effect or sound could go here
         } else {
             setLastScannedCount(0);
         }
@@ -116,10 +108,10 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
 
   const handleSubmit = () => {
     setSubmitted(true);
+    // Here you would save to database
     setTimeout(() => {
         setSubmitted(false);
         setAttendance({});
-        setLastScannedCount(0);
         setIsAutoScanning(false);
     }, 2500);
   };
@@ -191,7 +183,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
               <div className="absolute inset-0 border-4 border-blue-500/50 rounded-2xl z-10 pointer-events-none flex items-center justify-center">
                  <div className="bg-blue-600/80 text-white px-4 py-2 rounded-full flex items-center gap-2 backdrop-blur-sm">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Scanning...
+                    Scanning Faces...
                  </div>
               </div>
             )}
@@ -207,7 +199,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
              <div className="flex gap-3">
                <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
                <div className="text-sm text-blue-800">
-                  <strong>How it works:</strong> Turn on "Auto Scan". The AI continuously checks the video feed for student faces stored in the directory.
+                  <strong>How it works:</strong> Turn on "Auto Scan". Ensure student faces are visible. The AI checks every 4 seconds and automatically marks them present.
                </div>
              </div>
           </div>
