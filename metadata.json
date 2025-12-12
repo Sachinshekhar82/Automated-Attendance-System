@@ -1,0 +1,7 @@
+{
+  "name": "Gramin Shiksha Attendance",
+  "description": "An automated attendance system designed for rural schools using facial recognition simulation and AI-driven reporting to improve administrative efficiency.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
