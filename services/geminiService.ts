@@ -80,43 +80,66 @@ export const analyzeClassroomImage = async (base64Image: string): Promise<string
   }
 }
 
+// Helper to chunk array
+const chunkArray = <T>(array: T[], size: number): T[][] => {
+  const chunked: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunked.push(array.slice(i, i + size));
+  }
+  return chunked;
+};
+
 export const identifyStudentsInGroup = async (
   sceneImageBase64: string, 
   candidates: Student[]
 ): Promise<string[]> => {
   try {
     const sceneClean = sceneImageBase64.replace(/^data:image\/\w+;base64,/, "");
-    
-    // Prepare prompt parts
-    const parts: any[] = [
-      { text: "The first image is the 'SCENE'. The subsequent images are 'REFERENCE_PHOTOS' for specific students, labeled with their IDs. Your task is to look at the SCENE and identify which of the REFERENCE students are present in it. Return a JSON object: { \"present_student_ids\": [\"id1\", \"id2\"] }. Only return IDs for students you are confident are in the scene." },
-      { inlineData: { mimeType: 'image/jpeg', data: sceneClean } }
-    ];
+    const allFoundIds: string[] = [];
 
-    // Add reference images
-    // Limit to 5 candidates per batch to ensure accuracy and prevent payload limits if needed, 
-    // but Gemini Flash can handle many. We'll try up to 8 for this demo.
-    const processingCandidates = candidates.slice(0, 10); 
+    // Process in small batches (e.g., 5 students per batch) to ensure high accuracy and fit context
+    const batches = chunkArray(candidates, 5);
 
-    for (const student of processingCandidates) {
-      const imgData = await getImageData(student.photoUrl);
-      if (imgData) {
-        parts.push({ text: `Reference for Student ID: ${student.id}` });
-        parts.push({ inlineData: { mimeType: 'image/jpeg', data: imgData } });
+    // Process batches sequentially to avoid hitting rate limits too hard (though concurrent could work)
+    for (const batch of batches) {
+      const parts: any[] = [
+        { text: "The first image is the 'SCENE' (classroom view). The following images are 'REFERENCE_PHOTOS' of specific students. Your goal is to identify if any of the reference students appear in the SCENE. Ignore students in the scene if you don't have a matching reference photo for them." },
+        { inlineData: { mimeType: 'image/jpeg', data: sceneClean } },
+        { text: "Now, here are the reference photos:" }
+      ];
+
+      let hasValidRef = false;
+      for (const student of batch) {
+        const imgData = await getImageData(student.photoUrl);
+        if (imgData) {
+          parts.push({ text: `REFERENCE ID: "${student.id}"` });
+          parts.push({ inlineData: { mimeType: 'image/jpeg', data: imgData } });
+          hasValidRef = true;
+        }
+      }
+
+      if (!hasValidRef) continue;
+
+      parts.push({ text: "Return a JSON object with a list of IDs for students found in the SCENE: { \"present_student_ids\": [\"id1\", \"id2\"] }. Be strict: only include an ID if the face matches the reference photo with high confidence." });
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts },
+        config: { responseMimeType: "application/json" }
+      });
+
+      const text = response.text || "{}";
+      try {
+        const result = JSON.parse(text);
+        if (result.present_student_ids && Array.isArray(result.present_student_ids)) {
+          allFoundIds.push(...result.present_student_ids);
+        }
+      } catch (parseError) {
+        console.error("JSON Parse Error for batch:", parseError);
       }
     }
 
-    if (parts.length <= 2) return []; // No valid reference images
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: { parts },
-      config: { responseMimeType: "application/json" }
-    });
-
-    const text = response.text || "{}";
-    const result = JSON.parse(text);
-    return result.present_student_ids || [];
+    return allFoundIds;
 
   } catch (error) {
     console.error("Gemini Group ID Error:", error);
