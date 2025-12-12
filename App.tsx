@@ -1,27 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import AttendanceScanner from './components/AttendanceScanner';
 import StudentList from './components/StudentList';
-import Reports from './components/Reports';
+import AttendanceRecords from './components/AttendanceRecords'; // NEW
 import Login from './components/Login';
 import { AppView, Student } from './types';
-import { MOCK_STUDENTS } from './services/mockData';
+import { loadStudents, saveStudents } from './services/storage';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
-  // Use State for students, initialized with Mock Data. 
-  // No local storage means this resets on reload.
-  const [students, setStudents] = useState<Student[]>(MOCK_STUDENTS);
+  // Load students from storage instead of just mock data
+  const [students, setStudents] = useState<Student[]>([]);
+
+  useEffect(() => {
+    // Load data on mount
+    setStudents(loadStudents());
+  }, []);
 
   const handleAddStudent = (newStudent: Student) => {
-    setStudents(prev => [...prev, newStudent]);
+    const updated = [...students, newStudent];
+    setStudents(updated);
+    saveStudents(updated); // Save immediately
   };
 
   const handleDeleteStudent = (id: string) => {
-    setStudents(prev => prev.filter(s => s.id !== id));
+    const updated = students.filter(s => s.id !== id);
+    setStudents(updated);
+    saveStudents(updated); // Save immediately
   };
 
   const renderView = () => {
@@ -38,8 +46,8 @@ const App: React.FC = () => {
             onDeleteStudent={handleDeleteStudent} 
           />
         );
-      case AppView.REPORTS:
-        return <Reports students={students} />;
+      case AppView.RECORDS:
+        return <AttendanceRecords students={students} />;
       default:
         return <Dashboard onChangeView={setCurrentView} students={students} />;
     }

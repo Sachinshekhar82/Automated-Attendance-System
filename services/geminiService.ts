@@ -121,7 +121,7 @@ export const generateAttendanceReport = async (
   try {
     const summary = history.map(h => {
       const p = h.presentStudentIds.length;
-      const t = h.totalStudents;
+      const t = h.totalStudentsCount;
       return `${h.date}: ${p}/${t} present`;
     }).join('\n');
 

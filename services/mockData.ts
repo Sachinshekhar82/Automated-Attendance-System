@@ -26,7 +26,7 @@ const generateHistory = (): AttendanceRecord[] => {
       id: `hist-${i}`,
       date: dateStr,
       presentStudentIds: presentIds,
-      totalStudents: MOCK_STUDENTS.length,
+      totalStudentsCount: MOCK_STUDENTS.length,
     });
   }
   return records;
@@ -45,7 +45,7 @@ export const getAttendanceStats = (currentStudents: Student[], history: Attendan
 
   const trend = history.map(rec => ({
     name: new Date(rec.date).toLocaleDateString('en-US', { weekday: 'short' }),
-    attendance: Math.round((rec.presentStudentIds.length / Math.max(rec.totalStudents, 1)) * 100)
+    attendance: Math.round((rec.presentStudentIds.length / Math.max(rec.totalStudentsCount, 1)) * 100)
   }));
 
   return { average, trend };

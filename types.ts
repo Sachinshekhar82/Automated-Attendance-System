@@ -11,13 +11,15 @@ export interface Student {
 export interface AttendanceRecord {
   id: string;
   date: string; // ISO YYYY-MM-DD
+  timestamp: number; // For sorting
   presentStudentIds: string[];
-  totalStudents: number;
+  totalStudentsCount: number;
+  className: string;
 }
 
 export enum AppView {
   DASHBOARD = 'DASHBOARD',
   ATTENDANCE = 'ATTENDANCE',
   STUDENTS = 'STUDENTS',
-  REPORTS = 'REPORTS',
+  RECORDS = 'RECORDS', // Changed from REPORTS to RECORDS to fit new requirement
 }
