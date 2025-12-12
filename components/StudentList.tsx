@@ -57,7 +57,21 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setNewPhoto(reader.result as string);
+        // Resize uploaded image
+        const img = new Image();
+        img.src = reader.result as string;
+        img.onload = () => {
+           const canvas = document.createElement('canvas');
+           const MAX_WIDTH = 400;
+           const scaleSize = MAX_WIDTH / img.width;
+           canvas.width = MAX_WIDTH;
+           canvas.height = img.height * scaleSize;
+           const ctx = canvas.getContext('2d');
+           if (ctx) {
+             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+             setNewPhoto(canvas.toDataURL('image/jpeg', 0.8));
+           }
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -85,15 +99,20 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
   const capturePhoto = () => {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
+      // Resize to reduce memory usage and API payload
+      const videoWidth = videoRef.current.videoWidth;
+      const videoHeight = videoRef.current.videoHeight;
+      const MAX_WIDTH = 400;
+      const scale = MAX_WIDTH / videoWidth;
+      
+      canvas.width = MAX_WIDTH;
+      canvas.height = videoHeight * scale;
+      
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Mirror the image to match video feed if needed, usually intuitive for selfies
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(videoRef.current, 0, 0);
-        setNewPhoto(canvas.toDataURL('image/jpeg'));
+        // No mirror transform here, keep it simple for facial ID
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        setNewPhoto(canvas.toDataURL('image/jpeg', 0.8));
         stopCamera();
       }
     }

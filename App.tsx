@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import AttendanceScanner from './components/AttendanceScanner';
@@ -12,25 +12,8 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
-  // Initialize students from LocalStorage or fallback to Mock Data
-  const [students, setStudents] = useState<Student[]>(() => {
-    try {
-      const savedStudents = localStorage.getItem('gramin_students');
-      return savedStudents ? JSON.parse(savedStudents) : MOCK_STUDENTS;
-    } catch (e) {
-      console.error("Failed to load from local storage", e);
-      return MOCK_STUDENTS;
-    }
-  });
-
-  // Persist students to LocalStorage whenever the list changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('gramin_students', JSON.stringify(students));
-    } catch (e) {
-      console.error("Failed to save to local storage", e);
-    }
-  }, [students]);
+  // Removed LocalStorage logic. Always initialize with default Mock Data.
+  const [students, setStudents] = useState<Student[]>(MOCK_STUDENTS);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
