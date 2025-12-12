@@ -46,7 +46,7 @@ export const generateAttendanceReport = async (
 export const analyzeClassroomImage = async (base64Image: string): Promise<string> => {
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image', // Using a vision-capable model
+      model: 'gemini-2.5-flash', // Using a vision-capable model
       contents: {
         parts: [
           {
