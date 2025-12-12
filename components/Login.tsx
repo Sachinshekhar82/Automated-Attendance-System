@@ -164,7 +164,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               
               <div className="mt-4 text-center">
                 <p className="text-xs text-slate-400">
-                  Initial credentials: admin / admin123
+                  Initial credentials: admin
                 </p>
               </div>
             </form>
