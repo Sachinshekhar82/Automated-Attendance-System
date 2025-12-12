@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, CheckCircle, Loader2, Sparkles, StopCircle, PlayCircle, XCircle, Save, AlertTriangle } from 'lucide-react';
+import { Camera, CheckCircle, Loader2, Sparkles, StopCircle, PlayCircle, XCircle, Save, AlertTriangle, Settings2 } from 'lucide-react';
 import { identifyStudentsLocal } from '../services/faceService'; // Local AI
 import { saveRecord } from '../services/storage'; 
 import { Student } from '../types';
@@ -19,6 +19,10 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
   const [lastScannedCount, setLastScannedCount] = useState(0);
+  
+  // NEW: Strictness control (0.1 to 0.9)
+  // 0.4 is a good default for differentiating siblings
+  const [strictness, setStrictness] = useState(0.45);
 
   // Filter out students who don't have local face data yet
   const validStudents = students.filter(s => s.descriptor && s.descriptor.length > 0);
@@ -34,10 +38,10 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isAutoScanning && stream && !submitted) {
-      interval = setInterval(processFrame, 1500); // Faster scan with local AI!
+      interval = setInterval(processFrame, 1500); 
     }
     return () => clearInterval(interval);
-  }, [isAutoScanning, stream, attendance, submitted]); 
+  }, [isAutoScanning, stream, attendance, submitted, strictness]); // Re-run if strictness changes
 
   const startCamera = async () => {
     try {
@@ -87,8 +91,8 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
         
         const frameBase64 = canvasRef.current.toDataURL('image/jpeg', 0.9);
 
-        // USE LOCAL SERVICE
-        const foundIds = await identifyStudentsLocal(frameBase64, absentStudents);
+        // Pass the strictness slider value to the service
+        const foundIds = await identifyStudentsLocal(frameBase64, absentStudents, strictness);
         
         if (foundIds.length > 0) {
           setLastScannedCount(foundIds.length);
@@ -151,7 +155,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
   return (
     <div className="h-[calc(100vh-100px)] flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Live Attendance</h1>
           <p className="text-slate-500 font-medium">
@@ -165,21 +169,46 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
           )}
         </div>
         
-        <button
-          onClick={() => setIsAutoScanning(!isAutoScanning)}
-          className={`
-            flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl transform hover:-translate-y-1
-            ${isAutoScanning 
-              ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white animate-pulse' 
-              : 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-700 hover:to-blue-700'}
-          `}
-        >
-          {isAutoScanning ? (
-            <> <StopCircle className="w-6 h-6" /> Stop Scanning </>
-          ) : (
-            <> <PlayCircle className="w-6 h-6" /> Start Local AI Scan </>
-          )}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 items-center w-full xl:w-auto">
+          {/* Strictness Control */}
+          <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 flex flex-col w-full sm:w-64">
+             <div className="flex justify-between items-center mb-1">
+               <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><Settings2 className="w-3 h-3"/> Accuracy</span>
+               <span className="text-xs font-bold text-indigo-600">
+                 {strictness < 0.4 ? 'Very Strict' : strictness > 0.55 ? 'Loose' : 'Balanced'} ({strictness})
+               </span>
+             </div>
+             <input 
+               type="range" 
+               min="0.3" 
+               max="0.65" 
+               step="0.05" 
+               value={strictness} 
+               onChange={(e) => setStrictness(parseFloat(e.target.value))}
+               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+             />
+             <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+               <span>Exact Match</span>
+               <span>Similar</span>
+             </div>
+          </div>
+
+          <button
+            onClick={() => setIsAutoScanning(!isAutoScanning)}
+            className={`
+              flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl transform hover:-translate-y-1 w-full sm:w-auto
+              ${isAutoScanning 
+                ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white animate-pulse' 
+                : 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-700 hover:to-blue-700'}
+            `}
+          >
+            {isAutoScanning ? (
+              <> <StopCircle className="w-6 h-6" /> Stop </>
+            ) : (
+              <> <PlayCircle className="w-6 h-6" /> Start Scan </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8 h-full min-h-0">

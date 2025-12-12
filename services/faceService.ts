@@ -12,8 +12,10 @@ export const loadModels = async () => {
   if (isModelLoaded) return;
   console.log("Loading AI Models...");
   try {
+    // We use SSD MobileNet V1 because it is more accurate than TinyFaceDetector
+    // This is crucial for distinguishing siblings.
     await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL), // Face detection
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL), // High accuracy face detection
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), // Features
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)  // Description/Matching
     ]);
@@ -56,7 +58,8 @@ export const getFaceDescriptor = async (imageUrl: string): Promise<number[] | nu
 // Match faces in a classroom scene
 export const identifyStudentsLocal = async (
   sceneImageBase64: string, 
-  candidates: Student[]
+  candidates: Student[],
+  strictness: number = 0.45 // Default to stricter matching (Lower is stricter)
 ): Promise<string[]> => {
   if (!isModelLoaded) await loadModels();
 
@@ -72,8 +75,10 @@ export const identifyStudentsLocal = async (
 
   if (labeledDescriptors.length === 0) return [];
 
-  // 0.6 is a good threshold (lower = stricter, higher = looser)
-  const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+  // Create matcher with variable threshold
+  // 0.4 = Very Strict (Filters siblings)
+  // 0.6 = Loose (Good for bad lighting)
+  const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, strictness);
 
   // 2. Detect ALL faces in the scene
   const sceneImg = await createImage(sceneImageBase64);
@@ -86,8 +91,10 @@ export const identifyStudentsLocal = async (
   
   detections.forEach((fd: any) => {
     const bestMatch = faceMatcher.findBestMatch(fd.descriptor);
-    // If it's not "unknown", we found a student
+    
+    // Debugging: Log the distance to help user tune
     if (bestMatch.label !== 'unknown') {
+      console.log(`Matched ${bestMatch.label} with distance ${bestMatch.distance}`);
       foundIds.add(bestMatch.label);
     }
   });
