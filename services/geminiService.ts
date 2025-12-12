@@ -61,7 +61,7 @@ export const identifyStudentsInGroup = async (
     // 3. Process batches in PARALLEL using Promise.all for simultaneous recognition
     const batchPromises = batches.map(async (batch) => {
       const parts: any[] = [
-        { text: "Task: Facial Recognition. Identify which of the REFERENCE_STUDENTS are present in the CLASSROOM_SCENE.\n\nInstructions:\n1. Analyze the facial features of each REFERENCE_STUDENT.\n2. Scan the CLASSROOM_SCENE for matching faces.\n3. Be robust: Account for differences in lighting, camera angles, distance, or minor expression changes.\n4. Return the IDs of students who are definitely present." },
+        { text: "Task: Aggressive Facial Recognition.\n\nInstructions:\n1. Your goal is to maximize matches. Be EXTREMELY LENIENT.\n2. Compare the CLASSROOM_SCENE faces with REFERENCE_STUDENTS.\n3. Focus on permanent features: Eyes, Nose Bridge, and Jawline.\n4. IGNORE differences in: Lighting (dark/bright), Distance, Camera Quality, Hair style, or Glasses.\n5. If a face looks even 50% similar to a reference, mark them as PRESENT." },
         { text: "CLASSROOM_SCENE:" },
         { inlineData: { mimeType: 'image/jpeg', data: sceneClean } },
         { text: "REFERENCE_STUDENTS:" }
@@ -88,7 +88,7 @@ export const identifyStudentsInGroup = async (
           contents: { parts },
           config: { 
             responseMimeType: "application/json",
-            temperature: 0.1 
+            temperature: 0.4 // Increased temperature slightly to allow for "fuzzier" matching
           }
         });
 

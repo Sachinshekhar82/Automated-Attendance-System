@@ -52,7 +52,12 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 1280 }, // Request HD
+          height: { ideal: 720 }
+        } 
+      });
       setStream(mediaStream);
       setIsCameraOpen(true);
     } catch (e) {
@@ -67,8 +72,8 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
       const videoWidth = videoRef.current.videoWidth;
       const videoHeight = videoRef.current.videoHeight;
       
-      // OPTIMIZATION: Increased resolution for better AI accuracy
-      const MAX_WIDTH = 800; // Changed from 400 to 800
+      // OPTIMIZATION: Maximize resolution for Student Reference Photo
+      const MAX_WIDTH = 1280; 
       const scale = MAX_WIDTH / videoWidth;
       canvas.width = MAX_WIDTH;
       canvas.height = videoHeight * scale;
@@ -77,7 +82,8 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
       if (ctx) {
         // No mirroring for ID purposes
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        setPhoto(canvas.toDataURL('image/jpeg', 0.9)); // Increased quality to 0.9
+        // Use 1.0 quality (MAX)
+        setPhoto(canvas.toDataURL('image/jpeg', 1.0)); 
         stopCamera();
       }
     }
@@ -93,14 +99,15 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
         img.src = ev.target?.result as string;
         img.onload = () => {
            const canvas = document.createElement('canvas');
-           const MAX_WIDTH = 800; // Changed from 400 to 800
+           // OPTIMIZATION: Maximize resolution for Uploads
+           const MAX_WIDTH = 1280; 
            const scale = MAX_WIDTH / img.width;
            canvas.width = MAX_WIDTH;
            canvas.height = img.height * scale;
            const ctx = canvas.getContext('2d');
            if (ctx) {
              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-             setPhoto(canvas.toDataURL('image/jpeg', 0.9));
+             setPhoto(canvas.toDataURL('image/jpeg', 1.0));
            }
         };
       };
