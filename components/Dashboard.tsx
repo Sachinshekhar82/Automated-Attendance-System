@@ -17,7 +17,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onChangeView, totalStudents }) =>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-           <p className="text-slate-500">Welcome back, Headmaster Verma.</p>
+           <p className="text-slate-500">Welcome back, Sourav Singh .</p>
         </div>
         <div className="text-sm bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
           <Calendar className="w-4 h-4 text-slate-400" />
