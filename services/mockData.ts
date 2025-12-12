@@ -25,8 +25,10 @@ const generateHistory = (): AttendanceRecord[] => {
     records.push({
       id: `hist-${i}`,
       date: dateStr,
+      timestamp: date.getTime(),
       presentStudentIds: presentIds,
       totalStudentsCount: MOCK_STUDENTS.length,
+      className: '5A'
     });
   }
   return records;
