@@ -12,19 +12,16 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
-  // Removed LocalStorage logic. Always initialize with default Mock Data.
+  // Use State for students, initialized with Mock Data. 
+  // No local storage means this resets on reload.
   const [students, setStudents] = useState<Student[]>(MOCK_STUDENTS);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
-
   const handleAddStudent = (newStudent: Student) => {
-    setStudents([...students, newStudent]);
+    setStudents(prev => [...prev, newStudent]);
   };
 
   const handleDeleteStudent = (id: string) => {
-    setStudents(students.filter(s => s.id !== id));
+    setStudents(prev => prev.filter(s => s.id !== id));
   };
 
   const renderView = () => {
@@ -49,7 +46,7 @@ const App: React.FC = () => {
   };
 
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
   }
 
   return (

@@ -3,18 +3,16 @@ export interface Student {
   name: string;
   rollNumber: string;
   className: string;
-  photoUrl: string;
+  photoUrl: string; // Base64 or URL
   guardianName: string;
   contactNumber: string;
 }
 
 export interface AttendanceRecord {
   id: string;
-  date: string; // ISO Date string YYYY-MM-DD
+  date: string; // ISO YYYY-MM-DD
   presentStudentIds: string[];
   totalStudents: number;
-  notes?: string;
-  verifiedBy?: string;
 }
 
 export enum AppView {
@@ -22,9 +20,4 @@ export enum AppView {
   ATTENDANCE = 'ATTENDANCE',
   STUDENTS = 'STUDENTS',
   REPORTS = 'REPORTS',
-}
-
-export interface ChartDataPoint {
-  name: string;
-  attendance: number;
 }
