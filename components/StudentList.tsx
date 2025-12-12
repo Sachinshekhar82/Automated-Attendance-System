@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Phone, Search, Trash2, Plus, Upload, X, QrCode, Camera, RefreshCcw } from 'lucide-react';
+import { Phone, Search, Trash2, Plus, Upload, X, QrCode, Camera } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { Student } from '../types';
 
@@ -52,12 +52,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 }, // Request HD
-          height: { ideal: 720 }
-        } 
-      });
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
       setStream(mediaStream);
       setIsCameraOpen(true);
     } catch (e) {
@@ -72,8 +67,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
       const videoWidth = videoRef.current.videoWidth;
       const videoHeight = videoRef.current.videoHeight;
       
-      // OPTIMIZATION: Maximize resolution for Student Reference Photo
-      const MAX_WIDTH = 1280; 
+      const MAX_WIDTH = 400; // Reverted to 400
       const scale = MAX_WIDTH / videoWidth;
       canvas.width = MAX_WIDTH;
       canvas.height = videoHeight * scale;
@@ -82,8 +76,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
       if (ctx) {
         // No mirroring for ID purposes
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        // Use 1.0 quality (MAX)
-        setPhoto(canvas.toDataURL('image/jpeg', 1.0)); 
+        setPhoto(canvas.toDataURL('image/jpeg', 0.9)); 
         stopCamera();
       }
     }
@@ -99,15 +92,14 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
         img.src = ev.target?.result as string;
         img.onload = () => {
            const canvas = document.createElement('canvas');
-           // OPTIMIZATION: Maximize resolution for Uploads
-           const MAX_WIDTH = 1280; 
+           const MAX_WIDTH = 400; // Reverted to 400
            const scale = MAX_WIDTH / img.width;
            canvas.width = MAX_WIDTH;
            canvas.height = img.height * scale;
            const ctx = canvas.getContext('2d');
            if (ctx) {
              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-             setPhoto(canvas.toDataURL('image/jpeg', 1.0));
+             setPhoto(canvas.toDataURL('image/jpeg', 0.9));
            }
         };
       };
@@ -140,13 +132,6 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
     stopCamera();
   };
 
-  const handleResetSystem = () => {
-    if (confirm("Are you sure? This will delete ALL data (students, records, etc) and reset the app. This is useful for fixing bugs.")) {
-        localStorage.clear();
-        window.location.reload();
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -163,13 +148,6 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
               className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button 
-            onClick={handleResetSystem}
-            className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200"
-            title="Clear all data and start fresh"
-          >
-             <RefreshCcw className="w-4 h-4" /> Reset System
-          </button>
           <button 
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"

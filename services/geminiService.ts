@@ -55,14 +55,13 @@ export const identifyStudentsInGroup = async (
     const sceneClean = sceneImageBase64.replace(/^data:image\/\w+;base64,/, "");
     
     // 2. Batch Processing: 
-    // CRITICAL FIX: Reduced batch size from 10 to 3. 
-    // Sending HD images in large batches exceeds API payload limits, causing silent failures.
-    const batches = chunkArray(candidates, 3);
+    // Reverted to standard batch size
+    const batches = chunkArray(candidates, 10);
 
-    // 3. Process batches in PARALLEL using Promise.all
+    // 3. Process batches in PARALLEL using Promise.all for simultaneous recognition
     const batchPromises = batches.map(async (batch) => {
       const parts: any[] = [
-        { text: "Task: Match faces in the CLASSROOM_SCENE with REFERENCE_STUDENTS.\n\nInstructions:\n1. Be EXTREMELY LENIENT. If there is ANY resemblance, mark as Present.\n2. Ignore bad lighting, blur, different angles, or glasses.\n3. Match based on facial structure (jaw, nose, eyes).\n4. Return ONLY the IDs of matching students in the JSON format." },
+        { text: "Task: Facial Recognition. Identify which of the REFERENCE_STUDENTS are present in the CLASSROOM_SCENE.\n\nInstructions:\n1. Analyze the facial features of each REFERENCE_STUDENT.\n2. Scan the CLASSROOM_SCENE for matching faces.\n3. Be robust: Account for differences in lighting, camera angles, distance, or minor expression changes.\n4. Return the IDs of students who are definitely present." },
         { text: "CLASSROOM_SCENE:" },
         { inlineData: { mimeType: 'image/jpeg', data: sceneClean } },
         { text: "REFERENCE_STUDENTS:" }
@@ -89,7 +88,7 @@ export const identifyStudentsInGroup = async (
           contents: { parts },
           config: { 
             responseMimeType: "application/json",
-            temperature: 0.4 
+            temperature: 0.1 
           }
         });
 

@@ -37,13 +37,8 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
 
   const startCamera = async () => {
     try {
-      // Request HD resolution
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
+        video: { facingMode: 'environment' } 
       });
       setStream(mediaStream);
       if (videoRef.current) {
@@ -78,8 +73,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
         const videoWidth = videoRef.current.videoWidth;
         const videoHeight = videoRef.current.videoHeight;
         
-        // OPTIMIZATION: Maximize resolution for AI
-        const targetWidth = 1280; 
+        const targetWidth = 600; // Reverted to 600
         const scale = targetWidth / videoWidth;
         const targetHeight = videoHeight * scale;
 
@@ -87,8 +81,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
         canvasRef.current.height = targetHeight;
         context.drawImage(videoRef.current, 0, 0, targetWidth, targetHeight);
         
-        // Use 1.0 quality (MAX) to prevent compression artifacts
-        const frameBase64 = canvasRef.current.toDataURL('image/jpeg', 1.0);
+        const frameBase64 = canvasRef.current.toDataURL('image/jpeg', 0.9);
 
         const foundIds = await identifyStudentsInGroup(frameBase64, absentStudents);
         
