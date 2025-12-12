@@ -6,6 +6,7 @@ export interface Student {
   photoUrl: string; // Base64 or URL
   guardianName: string;
   contactNumber: string;
+  descriptor?: number[]; // The unique face math vector (128 numbers)
 }
 
 export interface AttendanceRecord {
@@ -21,5 +22,5 @@ export enum AppView {
   DASHBOARD = 'DASHBOARD',
   ATTENDANCE = 'ATTENDANCE',
   STUDENTS = 'STUDENTS',
-  RECORDS = 'RECORDS', // Changed from REPORTS to RECORDS to fit new requirement
+  RECORDS = 'RECORDS', 
 }

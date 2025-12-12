@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Phone, Search, Trash2, Plus, Upload, X, QrCode, Camera } from 'lucide-react';
+import { Phone, Search, Trash2, Plus, Upload, X, QrCode, Camera, AlertCircle } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { Student } from '../types';
+import { getFaceDescriptor } from '../services/faceService'; // Local AI
 
 interface StudentListProps {
   students: Student[];
@@ -14,6 +15,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
   const [studentForQr, setStudentForQr] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -67,14 +69,13 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
       const videoWidth = videoRef.current.videoWidth;
       const videoHeight = videoRef.current.videoHeight;
       
-      const MAX_WIDTH = 400; // Reverted to 400
+      const MAX_WIDTH = 500; 
       const scale = MAX_WIDTH / videoWidth;
       canvas.width = MAX_WIDTH;
       canvas.height = videoHeight * scale;
       
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // No mirroring for ID purposes
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         setPhoto(canvas.toDataURL('image/jpeg', 0.9)); 
         stopCamera();
@@ -87,12 +88,11 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => {
-        // Resize uploaded file too
         const img = new Image();
         img.src = ev.target?.result as string;
         img.onload = () => {
            const canvas = document.createElement('canvas');
-           const MAX_WIDTH = 400; // Reverted to 400
+           const MAX_WIDTH = 500;
            const scale = MAX_WIDTH / img.width;
            canvas.width = MAX_WIDTH;
            canvas.height = img.height * scale;
@@ -107,29 +107,48 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !roll || !photo) {
       alert("Please provide Name, Roll No and a Photo.");
       return;
     }
 
-    const newStudent: Student = {
-      id: Date.now().toString(),
-      name,
-      rollNumber: roll,
-      className: '5A',
-      photoUrl: photo,
-      guardianName: guardian || 'N/A',
-      contactNumber: contact || 'N/A'
-    };
+    setIsProcessing(true);
 
-    onAddStudent(newStudent);
-    
-    // Reset
-    setName(''); setRoll(''); setGuardian(''); setContact(''); setPhoto('');
-    setIsAddModalOpen(false);
-    stopCamera();
+    try {
+      // Generate Local Face Descriptor
+      const descriptor = await getFaceDescriptor(photo);
+
+      if (!descriptor) {
+        alert("Warning: No face detected in the photo. Please use a clearer photo or the face scan won't work for this student.");
+        setIsProcessing(false);
+        return;
+      }
+
+      const newStudent: Student = {
+        id: Date.now().toString(),
+        name,
+        rollNumber: roll,
+        className: '5A',
+        photoUrl: photo,
+        guardianName: guardian || 'N/A',
+        contactNumber: contact || 'N/A',
+        descriptor: descriptor // Saving the math vector
+      };
+
+      onAddStudent(newStudent);
+      
+      // Reset
+      setName(''); setRoll(''); setGuardian(''); setContact(''); setPhoto('');
+      setIsAddModalOpen(false);
+      stopCamera();
+    } catch (err) {
+      console.error(err);
+      alert("Error processing face photo.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -166,7 +185,9 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
               <p className="text-sm text-slate-400">Click "Add Student" to register yourself.</p>
            </div>
         ) : (
-          filteredStudents.map((student) => (
+          filteredStudents.map((student) => {
+            const hasFaceData = student.descriptor && student.descriptor.length > 0;
+            return (
             <div key={student.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-4">
                 <img 
@@ -184,7 +205,12 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
                 </div>
               </div>
               
-              <h3 className="font-bold text-slate-900 text-lg">{student.name}</h3>
+              <div className="flex items-center gap-2 mb-1">
+                 <h3 className="font-bold text-slate-900 text-lg">{student.name}</h3>
+                 {!hasFaceData && (
+                   <span className="text-amber-500" title="No face data. Re-add student."><AlertCircle className="w-4 h-4" /></span>
+                 )}
+              </div>
               <p className="text-sm text-slate-500">Roll: {student.rollNumber} • Class {student.className}</p>
               
               <div className="mt-4 pt-4 border-t border-slate-50 space-y-2 text-sm text-slate-600">
@@ -201,7 +227,8 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -264,8 +291,8 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
                 </div>
               </div>
 
-              <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 mt-6 shadow-lg">
-                Register Student
+              <button disabled={isProcessing} type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 mt-6 shadow-lg disabled:opacity-50">
+                {isProcessing ? 'Processing Face...' : 'Register Student'}
               </button>
             </form>
           </div>

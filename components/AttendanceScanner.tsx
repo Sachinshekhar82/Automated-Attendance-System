@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, CheckCircle, Loader2, Sparkles, StopCircle, PlayCircle, XCircle, Save } from 'lucide-react';
-import { identifyStudentsInGroup } from '../services/geminiService';
-import { saveRecord } from '../services/storage'; // NEW: Save to storage
+import { Camera, CheckCircle, Loader2, Sparkles, StopCircle, PlayCircle, XCircle, Save, AlertTriangle } from 'lucide-react';
+import { identifyStudentsLocal } from '../services/faceService'; // Local AI
+import { saveRecord } from '../services/storage'; 
 import { Student } from '../types';
 
 interface AttendanceScannerProps {
@@ -20,6 +20,10 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
   const [submitted, setSubmitted] = useState(false);
   const [lastScannedCount, setLastScannedCount] = useState(0);
 
+  // Filter out students who don't have local face data yet
+  const validStudents = students.filter(s => s.descriptor && s.descriptor.length > 0);
+  const missingDataCount = students.length - validStudents.length;
+
   // Initialize Camera
   useEffect(() => {
     startCamera();
@@ -30,7 +34,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isAutoScanning && stream && !submitted) {
-      interval = setInterval(processFrame, 3000); 
+      interval = setInterval(processFrame, 1500); // Faster scan with local AI!
     }
     return () => clearInterval(interval);
   }, [isAutoScanning, stream, attendance, submitted]); 
@@ -58,7 +62,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
 
   const processFrame = async () => {
     if (isProcessing || !videoRef.current || !canvasRef.current) return;
-    const absentStudents = students.filter(s => !attendance[s.id]);
+    const absentStudents = validStudents.filter(s => !attendance[s.id]);
 
     if (absentStudents.length === 0) {
       setIsAutoScanning(false);
@@ -73,7 +77,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
         const videoWidth = videoRef.current.videoWidth;
         const videoHeight = videoRef.current.videoHeight;
         
-        const targetWidth = 600; // Reverted to 600
+        const targetWidth = 600; 
         const scale = targetWidth / videoWidth;
         const targetHeight = videoHeight * scale;
 
@@ -83,7 +87,8 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
         
         const frameBase64 = canvasRef.current.toDataURL('image/jpeg', 0.9);
 
-        const foundIds = await identifyStudentsInGroup(frameBase64, absentStudents);
+        // USE LOCAL SERVICE
+        const foundIds = await identifyStudentsLocal(frameBase64, absentStudents);
         
         if (foundIds.length > 0) {
           setLastScannedCount(foundIds.length);
@@ -152,6 +157,12 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
           <p className="text-slate-500 font-medium">
             Class 5A • <span className="text-green-600 font-bold">{presentCount} Present</span>
           </p>
+          {missingDataCount > 0 && (
+             <p className="text-amber-600 text-xs font-bold flex items-center gap-1 mt-1">
+               <AlertTriangle className="w-3 h-3" /> 
+               {missingDataCount} students need photos updated for AI scan.
+             </p>
+          )}
         </div>
         
         <button
@@ -166,7 +177,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
           {isAutoScanning ? (
             <> <StopCircle className="w-6 h-6" /> Stop Scanning </>
           ) : (
-            <> <PlayCircle className="w-6 h-6" /> Start Auto Scan </>
+            <> <PlayCircle className="w-6 h-6" /> Start Local AI Scan </>
           )}
         </button>
       </div>
@@ -189,7 +200,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
             <div className="absolute top-6 left-6">
               <div className="bg-black/50 text-white px-4 py-2 rounded-xl text-sm font-bold backdrop-blur-md flex items-center gap-2 border border-white/10">
                 <Camera className="w-4 h-4 text-emerald-400" />
-                {isAutoScanning ? 'AI ACTIVE' : 'CAMERA READY'}
+                {isAutoScanning ? 'LOCAL AI ACTIVE' : 'CAMERA READY'}
               </div>
             </div>
 
@@ -197,7 +208,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
               <div className="absolute inset-0 z-10 flex items-center justify-center">
                  <div className="bg-indigo-600/90 text-white px-8 py-4 rounded-2xl flex items-center gap-4 shadow-2xl backdrop-blur-sm animate-pulse">
                     <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="font-bold text-lg">Scanning Faces...</span>
+                    <span className="font-bold text-lg">Matching Faces...</span>
                  </div>
               </div>
             )}
@@ -224,6 +235,7 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
           <div className="overflow-y-auto flex-1 p-4 space-y-3 bg-slate-50/50">
             {students.map(student => {
               const isPresent = attendance[student.id];
+              const hasData = student.descriptor && student.descriptor.length > 0;
               return (
                 <div 
                   key={student.id} 
@@ -254,7 +266,10 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
                       <p className={`text-lg font-bold ${isPresent ? 'text-slate-900' : 'text-slate-500'}`}>
                         {student.name}
                       </p>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{student.rollNumber}</p>
+                      <div className="flex gap-2 items-center">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{student.rollNumber}</p>
+                        {!hasData && <span title="No local face data" className="w-2 h-2 bg-amber-400 rounded-full"></span>}
+                      </div>
                     </div>
                   </div>
 
