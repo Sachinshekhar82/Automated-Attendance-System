@@ -72,14 +72,16 @@ const AttendanceScanner: React.FC<AttendanceScannerProps> = ({ students }) => {
       if (context) {
         const videoWidth = videoRef.current.videoWidth;
         const videoHeight = videoRef.current.videoHeight;
-        const targetWidth = 600;
+        
+        // OPTIMIZATION: Increased resolution for better AI detection
+        const targetWidth = 800; // Changed from 600 to 800
         const scale = targetWidth / videoWidth;
         const targetHeight = videoHeight * scale;
 
         canvasRef.current.width = targetWidth;
         canvasRef.current.height = targetHeight;
         context.drawImage(videoRef.current, 0, 0, targetWidth, targetHeight);
-        const frameBase64 = canvasRef.current.toDataURL('image/jpeg', 0.85);
+        const frameBase64 = canvasRef.current.toDataURL('image/jpeg', 0.9);
 
         const foundIds = await identifyStudentsInGroup(frameBase64, absentStudents);
         

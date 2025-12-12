@@ -61,7 +61,7 @@ export const identifyStudentsInGroup = async (
     // 3. Process batches in PARALLEL using Promise.all for simultaneous recognition
     const batchPromises = batches.map(async (batch) => {
       const parts: any[] = [
-        { text: "Task: Facial Recognition. Identify which of the REFERENCE_STUDENTS are present in the CLASSROOM_SCENE. Be strict: only match if the face is clearly visible and matches the reference." },
+        { text: "Task: Facial Recognition. Identify which of the REFERENCE_STUDENTS are present in the CLASSROOM_SCENE.\n\nInstructions:\n1. Analyze the facial features of each REFERENCE_STUDENT.\n2. Scan the CLASSROOM_SCENE for matching faces.\n3. Be robust: Account for differences in lighting, camera angles, distance, or minor expression changes.\n4. Return the IDs of students who are definitely present." },
         { text: "CLASSROOM_SCENE:" },
         { inlineData: { mimeType: 'image/jpeg', data: sceneClean } },
         { text: "REFERENCE_STUDENTS:" }
