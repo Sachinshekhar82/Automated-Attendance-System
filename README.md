@@ -1,4 +1,6 @@
 deployed link :https://automated-attendance-system-git-main-sachin-shekhars-projects.vercel.app/
+username -admin
+password - password
 ## Run Locally
 
 **Prerequisites:**  Node.js
